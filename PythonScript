@@ -1,6 +1,8 @@
-Copiar código
-import pandas as pd
-
+bash
+pip install pandas scikit-learn numpy matplotlib seaborn
+Step-by-Step Python Code (No Missing Value Handling Required):
+1. Load the Data
+python
 # Load the train and test datasets
 train_data = pd.read_csv('path_to_train.csv')  # Replace with actual path to your train.csv
 test_data = pd.read_csv('path_to_test.csv')    # Replace with actual path to your test.csv
@@ -12,7 +14,6 @@ print(test_data.head())
 2. Feature Engineering
 Create features like the number of actions per user and the total session duration for each user:
 python
-Copiar código
 # Convert 'time' to datetime
 train_data['time'] = pd.to_datetime(train_data['time'])
 test_data['time'] = pd.to_datetime(test_data['time'])
@@ -24,3 +25,74 @@ test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_i
 # Feature 2: Time spent per user session
 train_data['session_duration'] = train_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
 test_data['session_duration'] = test_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+
+3. Prepare the Data for Modeling
+Join the new features with the original datasets and separate features (X) from the target (y):
+python
+# Merge the feature (actions count) with the original data
+train_data_final = pd.merge(train_data, train_actions_per_user, on='enroll_id')
+test_data_final = pd.merge(test_data, test_actions_per_user, on='enroll_id')
+
+# Define the features (X) and the target (y)
+X_train = train_data_final[['action_count', 'session_duration']]
+y_train = train_data_final['truth']
+X_test = test_data_final[['action_count', 'session_duration']]
+y_test = test_data_final['truth']
+
+4. Modeling: Logistic Regression
+python
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
+
+# Train a Logistic Regression model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Logistic Regression Accuracy: ", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+5. Alternative Model: Random Forest
+python
+from sklearn.ensemble import RandomForestClassifier
+
+# Train a Random Forest model
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# Predict on the test set
+rf_pred = rf_model.predict(X_test)
+
+# Evaluate the Random Forest model
+print("Random Forest Accuracy: ", accuracy_score(y_test, rf_pred))
+print("Classification Report:\n", classification_report(y_test, rf_pred))
+
+6. Model Evaluation
+Use metrics like AUC-ROC and confusion matrices for model evaluation:
+python
+from sklearn.metrics import roc_auc_score, confusion_matrix
+
+# Calculate AUC-ROC score
+logistic_auc = roc_auc_score(y_test, y_pred)
+rf_auc = roc_auc_score(y_test, rf_pred)
+
+print("Logistic Regression AUC-ROC: ", logistic_auc)
+print("Random Forest AUC-ROC: ", rf_auc)
+
+# Confusion Matrix for Logistic Regression
+print("Logistic Regression Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+# Confusion Matrix for Random Forest
+print("Random Forest Confusion Matrix:\n", confusion_matrix(y_test, rf_pred))
+
+Summary of Steps:
+1. Load the data from train.csv and test.csv.
+2. Feature Engineering: Create features such as total actions per user and session duration.
+3. Prepare the data: Separate features (X) and the target variable (y).
+4. Modeling: Use Logistic Regression and Random Forest to predict dropout.
+5. Evaluate the model using metrics like accuracy, AUC-ROC, and confusion matrices.
