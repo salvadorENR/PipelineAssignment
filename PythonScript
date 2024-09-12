@@ -1,0 +1,26 @@
+Copiar código
+import pandas as pd
+
+# Load the train and test datasets
+train_data = pd.read_csv('path_to_train.csv')  # Replace with actual path to your train.csv
+test_data = pd.read_csv('path_to_test.csv')    # Replace with actual path to your test.csv
+
+# Display the first few rows
+print(train_data.head())
+print(test_data.head())
+
+2. Feature Engineering
+Create features like the number of actions per user and the total session duration for each user:
+python
+Copiar código
+# Convert 'time' to datetime
+train_data['time'] = pd.to_datetime(train_data['time'])
+test_data['time'] = pd.to_datetime(test_data['time'])
+
+# Feature 1: Total number of actions per user (engagement level)
+train_actions_per_user = train_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+
+# Feature 2: Time spent per user session
+train_data['session_duration'] = train_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+test_data['session_duration'] = test_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
