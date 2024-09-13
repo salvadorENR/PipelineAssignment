@@ -4,8 +4,8 @@ Step-by-Step Python Code (No Missing Value Handling Required):
 1. Load the Data
 python
 # Load the train and test datasets
-train_data = pd.read_csv('path_to_train.csv')  # Replace with actual path to your train.csv
-test_data = pd.read_csv('path_to_test.csv')    # Replace with actual path to your test.csv
+train_data = pd.read_csv('train.csv')  # Replace with actual path to your train.csv
+test_data = pd.read_csv('test.csv')    # Replace with actual path to your test.csv
 
 # Display the first few rows
 print(train_data.head())
