@@ -1,8 +1,9 @@
-bash
+********************** Step-by-Step Python Code (No Missing Value Handling Required)***************************************************************************
+#bash
 pip install pandas scikit-learn numpy matplotlib seaborn
-Step-by-Step Python Code (No Missing Value Handling Required):
-1. Load the Data
-python
+#1. Load the Data
+#python
+import pandas as pd
 # Load the train and test datasets
 train_data = pd.read_csv('train.csv')  # Replace with actual path to your train.csv
 test_data = pd.read_csv('test.csv')    # Replace with actual path to your test.csv
@@ -11,9 +12,9 @@ test_data = pd.read_csv('test.csv')    # Replace with actual path to your test.c
 print(train_data.head())
 print(test_data.head())
 
-2. Feature Engineering
-Create features like the number of actions per user and the total session duration for each user:
-python
+#2. Feature Engineering
+#Create features like the number of actions per user and the total session duration for each user:
+#python
 # Convert 'time' to datetime
 train_data['time'] = pd.to_datetime(train_data['time'])
 test_data['time'] = pd.to_datetime(test_data['time'])
@@ -72,9 +73,9 @@ rf_pred = rf_model.predict(X_test)
 print("Random Forest Accuracy: ", accuracy_score(y_test, rf_pred))
 print("Classification Report:\n", classification_report(y_test, rf_pred))
 
-6. Model Evaluation
-Use metrics like AUC-ROC and confusion matrices for model evaluation:
-python
+#6. Model Evaluation
+#Use metrics like AUC-ROC and confusion matrices for model evaluation:
+#python
 from sklearn.metrics import roc_auc_score, confusion_matrix
 
 # Calculate AUC-ROC score
