@@ -1,0 +1,91 @@
+#Bash
+pip install imblearn
+
+# Import necessary libraries
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from imblearn.over_sampling import SMOTE
+
+# Load the train and test datasets
+train_data = pd.read_csv('train.csv')  # Replace with the actual path
+test_data = pd.read_csv('test.csv')    # Replace with the actual path
+
+# Feature Engineering
+# Convert 'time' to datetime
+train_data['time'] = pd.to_datetime(train_data['time'])
+test_data['time'] = pd.to_datetime(test_data['time'])
+
+# Feature 1: Total number of actions per user (engagement level)
+train_actions_per_user = train_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+
+# Feature 2: Time spent per user session
+train_data['session_duration'] = train_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+test_data['session_duration'] = test_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+
+# Merge the newly created features with the original data
+train_data_final = pd.merge(train_data, train_actions_per_user, on='enroll_id')
+test_data_final = pd.merge(test_data, test_actions_per_user, on='enroll_id')
+
+# Prepare the target variable (y)
+y_train = train_data_final['truth']  # Target variable: Dropout (1) or Non-Dropout (0)
+y_test = test_data_final['truth']  # Target variable for test data
+
+# Use only the two quantitative features for the Decision Tree
+X_train = train_data_final[['action_count', 'session_duration']]
+X_test = test_data_final[['action_count', 'session_duration']]
+
+### Option 1: Normal Decision Tree (No Class Weighting, Raw Data) ###
+# Initialize the normal Decision Tree model (no class weighting)
+dt_model_normal = DecisionTreeClassifier(max_depth=5, random_state=42)
+
+# Train the model on the raw data
+dt_model_normal.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred_normal = dt_model_normal.predict(X_test)
+
+# Evaluate the normal decision tree model (with raw data)
+print("=== Option 1: Normal Decision Tree (Raw Data) ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_normal))
+print("Classification Report (Normal Decision Tree):\n", classification_report(y_test, y_pred_normal))
+
+
+### Option 2: Decision Tree with Class Weighting ###
+# Initialize the Decision Tree model with class_weight='balanced'
+dt_model_weighted = DecisionTreeClassifier(class_weight='balanced', max_depth=5, random_state=42)
+
+# Train the model on the training data
+dt_model_weighted.fit(X_train, y_train)
+
+# Make predictions on the test data
+y_pred_weighted = dt_model_weighted.predict(X_test)
+
+# Evaluate the model with class weighting
+print("\n=== Option 2: Decision Tree with Class Weighting ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_weighted))
+print("Classification Report with Class Weighting:\n", classification_report(y_test, y_pred_weighted))
+
+
+### Option 3: Applying SMOTE to Handle Class Imbalance ###
+# Apply SMOTE to oversample the minority class (dropouts)
+smote = SMOTE(random_state=42)
+
+# Apply SMOTE to X_train and y_train
+X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+
+# Initialize a new Decision Tree model for SMOTE
+dt_model_smote = DecisionTreeClassifier(max_depth=5, random_state=42)
+
+# Train the model on the SMOTE-balanced data
+dt_model_smote.fit(X_train_smote, y_train_smote)
+
+# Make predictions on the test data (without oversampling test data)
+y_pred_smote = dt_model_smote.predict(X_test)
+
+# Evaluate the model with SMOTE oversampling
+print("\n=== Option 3: Decision Tree with SMOTE Oversampling ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_smote))
+print("Classification Report with SMOTE Oversampling:\n", classification_report(y_test, y_pred_smote))
