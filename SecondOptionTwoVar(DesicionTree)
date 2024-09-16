@@ -1,5 +1,5 @@
 #Bash
-pip install imblearn
+pip install pandas scikit-learn numpy matplotlib seaborn imblearn 
 
 # Import necessary libraries
 import pandas as pd
@@ -84,6 +84,11 @@ dt_model_smote.fit(X_train_smote, y_train_smote)
 
 # Make predictions on the test data (without oversampling test data)
 y_pred_smote = dt_model_smote.predict(X_test)
+
+# Evaluate the model with SMOTE oversampling
+print("\n=== Option 3: Decision Tree with SMOTE Oversampling ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_smote))
+print("Classification Report with SMOTE Oversampling:\n", classification_report(y_test, y_pred_smote))
 
 # Evaluate the model with SMOTE oversampling
 print("\n=== Option 3: Decision Tree with SMOTE Oversampling ===")
