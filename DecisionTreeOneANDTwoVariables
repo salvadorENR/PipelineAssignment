@@ -1,0 +1,79 @@
+# Import necessary libraries
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# Load the train and test datasets
+train_data = pd.read_csv('train.csv')  # Replace with the actual path
+test_data = pd.read_csv('test.csv')    # Replace with the actual path
+
+# Feature Engineering
+# Convert 'time' to datetime
+train_data['time'] = pd.to_datetime(train_data['time'])
+test_data['time'] = pd.to_datetime(test_data['time'])
+
+# Feature 1: Total number of actions per user (engagement level)
+train_actions_per_user = train_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+
+# Feature 2: Time spent per user session
+train_data['session_duration'] = train_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+test_data['session_duration'] = test_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+
+# Merge the newly created features with the original data
+train_data_final = pd.merge(train_data, train_actions_per_user, on='enroll_id')
+test_data_final = pd.merge(test_data, test_actions_per_user, on='enroll_id')
+
+# Prepare the target variable (y)
+y_train = train_data_final['truth']  # Target variable: Dropout (1) or Non-Dropout (0)
+y_test = test_data_final['truth']  # Target variable for test data
+
+### Model 1: Using only Total number of actions per user ###
+X_train_actions = train_data_final[['action_count']]
+X_test_actions = test_data_final[['action_count']]
+
+# Initialize and train the Decision Tree model
+dt_model_actions = DecisionTreeClassifier(max_depth=5, random_state=42)
+dt_model_actions.fit(X_train_actions, y_train)
+
+# Make predictions
+y_pred_actions = dt_model_actions.predict(X_test_actions)
+
+# Evaluate the model
+print("=== Model 1: Decision Tree with Total Number of Actions per User ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_actions))
+print("Classification Report (Actions per User):\n", classification_report(y_test, y_pred_actions))
+
+
+### Model 2: Using only Time spent per user session ###
+X_train_duration = train_data_final[['session_duration']]
+X_test_duration = test_data_final[['session_duration']]
+
+# Initialize and train the Decision Tree model
+dt_model_duration = DecisionTreeClassifier(max_depth=5, random_state=42)
+dt_model_duration.fit(X_train_duration, y_train)
+
+# Make predictions
+y_pred_duration = dt_model_duration.predict(X_test_duration)
+
+# Evaluate the model
+print("\n=== Model 2: Decision Tree with Time Spent per User Session ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_duration))
+print("Classification Report (Time Spent per Session):\n", classification_report(y_test, y_pred_duration))
+
+
+### Model 3: Using both features (Total number of actions per user + Time spent per session) ###
+X_train_both = train_data_final[['action_count', 'session_duration']]
+X_test_both = test_data_final[['action_count', 'session_duration']]
+
+# Initialize and train the Decision Tree model
+dt_model_both = DecisionTreeClassifier(max_depth=5, random_state=42)
+dt_model_both.fit(X_train_both, y_train)
+
+# Make predictions
+y_pred_both = dt_model_both.predict(X_test_both)
+
+# Evaluate the model
+print("\n=== Model 3: Decision Tree with Both Features ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_both))
+print("Classification Report (Both Features):\n", classification_report(y_test, y_pred_both))
