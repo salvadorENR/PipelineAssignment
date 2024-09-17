@@ -1,37 +1,90 @@
-#bash
-pip install pandas scikit-learn numpy matplotlib seaborn imblearn 
-
-#python
+# Install necessary Python packages
+pip install scikit-learn numpy pandas
+# Import necessary libraries
 import pandas as pd
-from sklearn.model_selection import train_test_split
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import classification_report, accuracy_score
-from imblearn.over_sampling import SMOTE
-from sklearn.model_selection import GridSearchCV
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 
-# Define the parameter grid
-param_grid = {
-    'max_depth': [3, 5, 10, 15],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 2, 5],
-    'criterion': ['gini', 'entropy']
-}
+# Bash installation within Python (if required)
+import os
+os.system('pip install scikit-learn numpy pandas')
 
-# Initialize the Decision Tree model
+# Load the train and test datasets
+train_data = pd.read_csv('train.csv')  # Replace with the actual path
+test_data = pd.read_csv('test.csv')    # Replace with the actual path
+
+# Feature Engineering
+# Convert 'time' to datetime
+train_data['time'] = pd.to_datetime(train_data['time'])
+test_data['time'] = pd.to_datetime(test_data['time'])
+
+# Feature 1: Total number of actions per user (engagement level)
+train_actions_per_user = train_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
+
+# Merge the newly created features with the original data
+train_data_final = pd.merge(train_data, train_actions_per_user, on='enroll_id')
+test_data_final = pd.merge(test_data, test_actions_per_user, on='enroll_id')
+
+# Prepare the target variable (y)
+y_train = train_data_final['truth']  # Target variable: Dropout (1) or Non-Dropout (0)
+y_test = test_data_final['truth']  # Target variable for test data
+
+# Use only the Total number of actions per user for the Decision Tree
+X_train_actions = train_data_final[['action_count']]
+X_test_actions = test_data_final[['action_count']]
+
+### Step 1: Build Model 1 (Decision Tree with default parameters)
 dt_model = DecisionTreeClassifier(random_state=42)
 
-# Set up GridSearchCV
-grid_search = GridSearchCV(estimator=dt_model, param_grid=param_grid, cv=5, scoring='accuracy')
+# Train the model
+dt_model.fit(X_train_actions, y_train)
 
-# Train the model using GridSearchCV
-grid_search.fit(X_train_actions, y_train)
+# Make predictions on the test data
+y_pred = dt_model.predict(X_test_actions)
 
-# Print the best parameters and score
-print("Best Hyperparameters:", grid_search.best_params_)
-print("Best Score:", grid_search.best_score_)
+# Evaluate the model
+print("=== Model 1: Decision Tree with Total Number of Actions per User ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred))
+print("Classification Report (Actions per User):\n", classification_report(y_test, y_pred))
 
-# Evaluate the best model on the test set
-best_model = grid_search.best_estimator_
-y_pred = best_model.predict(X_test_actions)
-print("Classification Report (Improved Model):\n", classification_report(y_test, y_pred))
+### Step 2: Hyperparameter Tuning with RandomizedSearchCV
+
+# Define the parameter grid for hyperparameter tuning
+param_grid = {
+    'max_depth': np.arange(3, 15),  # Range of tree depths to explore
+    'min_samples_split': [2, 5, 10],  # Minimum samples needed to split a node
+    'min_samples_leaf': [1, 2, 4],  # Minimum samples needed to be at a leaf node
+    'criterion': ['gini', 'entropy']  # Split criterion
+}
+
+# Initialize the RandomizedSearchCV with Decision Tree
+random_search = RandomizedSearchCV(dt_model, param_distributions=param_grid, n_iter=10, cv=5, random_state=42, n_jobs=-1)
+
+# Train the model with RandomizedSearchCV
+random_search.fit(X_train_actions, y_train)
+
+# Get the best parameters from the RandomizedSearchCV
+best_params = random_search.best_params_
+best_score = random_search.best_score_
+
+# Print best parameters and score
+print("\n=== Best Hyperparameters from RandomizedSearchCV ===")
+print("Best Hyperparameters: ", best_params)
+print("Best Cross-Validation Score: ", best_score)
+
+### Step 3: Train the Best Model and Evaluate
+
+# Use the best model from RandomizedSearchCV
+best_model = random_search.best_estimator_
+
+# Make predictions with the best model on the test data
+y_pred_best = best_model.predict(X_test_actions)
+
+# Evaluate the best model
+print("\n=== Model 1 After Hyperparameter Tuning ===")
+print("Accuracy: ", accuracy_score(y_test, y_pred_best))
+print("Classification Report (Tuned Model):\n", classification_report(y_test, y_pred_best))
+
