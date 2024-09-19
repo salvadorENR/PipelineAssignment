@@ -77,3 +77,42 @@ y_pred_both = dt_model_both.predict(X_test_both)
 print("\n=== Model 3: Decision Tree with Both Features ===")
 print("Accuracy: ", accuracy_score(y_test, y_pred_both))
 print("Classification Report (Both Features):\n", classification_report(y_test, y_pred_both))
+
+# Plotting the Decision Tree
+plt.figure(figsize=(15, 8))
+plot_tree(dt_model_actions, feature_names=['action_count'], class_names=['No Dropout', 'Dropout'], filled=True)
+plt.title("Decision Tree Visualization - Model 1")
+plt.show()
+
+# Feature Importance using RandomForestClassifier (optional for understanding feature impact)
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train_actions, y_train)
+
+# Plotting feature importances
+importances = rf_model.feature_importances_
+plt.figure(figsize=(8, 5))
+sns.barplot(x=importances, y=['action_count'])
+plt.title('Feature Importances in Random Forest - Model 1')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
