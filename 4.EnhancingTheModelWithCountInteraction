@@ -1,90 +1,63 @@
-# Install necessary Python packages
-pip install scikit-learn numpy pandas
-# Import necessary libraries
+# Importar las librerías necesarias
 import pandas as pd
-import numpy as np
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
+import matplotlib.pyplot as plt
 
-# Bash installation within Python (if required)
-import os
-os.system('pip install scikit-learn numpy pandas')
+# Cargar los conjuntos de datos de entrenamiento y prueba (ajustar las rutas según sea necesario)
+train_data = pd.read_csv('train.csv')  # Reemplazar con la ruta correcta
+test_data = pd.read_csv('test.csv')    # Reemplazar con la ruta correcta
 
-# Load the train and test datasets
-train_data = pd.read_csv('train.csv')  # Replace with the actual path
-test_data = pd.read_csv('test.csv')    # Replace with the actual path
-
-# Feature Engineering
-# Convert 'time' to datetime
+# Ingeniería de características
+# Convertir 'time' a formato datetime
 train_data['time'] = pd.to_datetime(train_data['time'])
 test_data['time'] = pd.to_datetime(test_data['time'])
 
-# Feature 1: Total number of actions per user (engagement level)
+# Mostrar los tipos de datos de cada variable en el conjunto de datos de entrenamiento
+print("Tipos de variables en el conjunto de datos de entrenamiento:")
+print(train_data.dtypes)
+
+# Mostrar los tipos de datos de cada variable en el conjunto de datos de prueba
+print("\nTipos de variables en el conjunto de datos de prueba:")
+print(test_data.dtypes)
+#Rellenar los valores faltantes en 'object' con 'unknown' 
+train_data['object'].fillna('unknown', inplace=True)
+#Verificar si quedan valores faltantes 
+print(train_data.isnull().sum())
+#Ingeniería de características 
+#Convertir 'time' a formato datetime
+train_data['time'] = pd.to_datetime(train_data['time']) 
+test_data['time'] = pd.to_datetime(test_data['time'])
+
+#Característica 1: Número total de acciones por usuario (nivel de compromiso)
 train_actions_per_user = train_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
 test_actions_per_user = test_data.groupby('enroll_id')['action'].count().reset_index(name='action_count')
 
-# Merge the newly created features with the original data
+# Característica 2: Tiempo total de sesión por usuario
+train_data['session_duration'] = train_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+test_data['session_duration'] = test_data.groupby('session_id')['time'].transform(lambda x: (x.max() - x.min()).seconds)
+
+#Combinar las nuevas características creadas con los datos originales
 train_data_final = pd.merge(train_data, train_actions_per_user, on='enroll_id')
 test_data_final = pd.merge(test_data, test_actions_per_user, on='enroll_id')
 
-# Prepare the target variable (y)
-y_train = train_data_final['truth']  # Target variable: Dropout (1) or Non-Dropout (0)
-y_test = test_data_final['truth']  # Target variable for test data
+# Calcular las estadísticas generales de action_count y session_duration
+print(train_data_final[['action_count', 'session_duration']].describe())
 
-# Use only the Total number of actions per user for the Decision Tree
-X_train_actions = train_data_final[['action_count']]
-X_test_actions = test_data_final[['action_count']]
+#Gráfico de barras para la variable 'action'
+plt.figure(figsize=(10, 6))
+sns.countplot(y='action',
+data=train_data, order=train_data['action'].value_counts().index)
+plt.title('Distribución de Acciones Realizadas por los Usuarios')
+plt.show()
 
-### Step 1: Build Model 1 (Decision Tree with default parameters)
-dt_model = DecisionTreeClassifier(random_state=42)
+#Mostrar valores únicos y conteos
+for column in categorical_columns:
+    print(f"Resumen de {column}:")
+    print(train_data[column].value_counts())
+    print("\n")
 
-# Train the model
-dt_model.fit(X_train_actions, y_train)
-
-# Make predictions on the test data
-y_pred = dt_model.predict(X_test_actions)
-
-# Evaluate the model
-print("=== Model 1: Decision Tree with Total Number of Actions per User ===")
-print("Accuracy: ", accuracy_score(y_test, y_pred))
-print("Classification Report (Actions per User):\n", classification_report(y_test, y_pred))
-
-### Step 2: Hyperparameter Tuning with RandomizedSearchCV
-
-# Define the parameter grid for hyperparameter tuning
-param_grid = {
-    'max_depth': np.arange(3, 15),  # Range of tree depths to explore
-    'min_samples_split': [2, 5, 10],  # Minimum samples needed to split a node
-    'min_samples_leaf': [1, 2, 4],  # Minimum samples needed to be at a leaf node
-    'criterion': ['gini', 'entropy']  # Split criterion
-}
-
-# Initialize the RandomizedSearchCV with Decision Tree
-random_search = RandomizedSearchCV(dt_model, param_distributions=param_grid, n_iter=10, cv=5, random_state=42, n_jobs=-1)
-
-# Train the model with RandomizedSearchCV
-random_search.fit(X_train_actions, y_train)
-
-# Get the best parameters from the RandomizedSearchCV
-best_params = random_search.best_params_
-best_score = random_search.best_score_
-
-# Print best parameters and score
-print("\n=== Best Hyperparameters from RandomizedSearchCV ===")
-print("Best Hyperparameters: ", best_params)
-print("Best Cross-Validation Score: ", best_score)
-
-### Step 3: Train the Best Model and Evaluate
-
-# Use the best model from RandomizedSearchCV
-best_model = random_search.best_estimator_
-
-# Make predictions with the best model on the test data
-y_pred_best = best_model.predict(X_test_actions)
-
-# Evaluate the best model
-print("\n=== Model 1 After Hyperparameter Tuning ===")
-print("Accuracy: ", accuracy_score(y_test, y_pred_best))
-print("Classification Report (Tuned Model):\n", classification_report(y_test, y_pred_best))
-
+#Gráfico de barras para la variable objetivo 'truth'
+sns.countplot(x='truth', data=train_data)
+plt.title('Distribución de Abandonos (1) y No Abandonos (0)')
+plt.show()
